@@ -8,28 +8,10 @@ TString cuts;
 TString cutb;
 TString cutg;
 TString weight="1";
-//TString weight="pthatweight";
-void readxml_BDT(Float_t ptMin=7., Float_t ptMax=10., Float_t RAA=0.49)
+
+void readxml_BDT(TString inputSname, TString inputBname,
+                 Int_t pbpb=1, TString mva="BDT", Float_t ptMin=7., Float_t ptMax=10., Float_t RAA=1.)
 {
-  TString inputSname = "/data/wangj/tmvaBntupleRunII/ntB_PbPb_MC_7_10_Pthat5_BDT_Pthat5train.root";
-  TString inputBname = "/data/wangj/tmvaBntupleRunII/ntB_PbPb_Data_7_10_BDT_Pthat5train.root";
-
-  void calRatio(TTree* signal, TTree* background, TTree* generated, Float_t* results, Bool_t verbose=false);
-  ptmin = ptMin;
-  ptmax = ptMax;
-  raa = RAA;
-
-  TLatex* texPar = new TLatex(0.18,0.93, "PbPb 5.02 TeV B^{+}");
-  texPar->SetNDC();
-  texPar->SetTextAlign(12);
-  texPar->SetTextSize(0.04);
-  texPar->SetTextFont(42);
-  TLatex* texPtY = new TLatex(0.96,0.93, Form("|y|<2.4, %.1f<p_{T}<%.1f GeV/c",ptmin,ptmax));
-  texPtY->SetNDC();
-  texPtY->SetTextAlign(32);
-  texPtY->SetTextSize(0.04);
-  texPtY->SetTextFont(42);
-
   gStyle->SetOptTitle(0);
   gStyle->SetOptStat(0);
   gStyle->SetEndErrorSize(0);
@@ -41,6 +23,32 @@ void readxml_BDT(Float_t ptMin=7., Float_t ptMax=10., Float_t RAA=0.49)
   gStyle->SetPadTopMargin(0.1);
   gStyle->SetPadBottomMargin(0.145);
   gStyle->SetTitleX(.0f);
+
+  void calRatio(TTree* signal, TTree* background, TTree* generated, Float_t* results, Bool_t verbose=false);
+  ptmin = ptMin;
+  ptmax = ptMax;
+  isPbPb = (bool)pbpb;
+  MVAtype = (TString)mva;
+  raa = isPbPb?RAA:1.;
+  mycuts = isPbPb?mycuts_PP:mycuts_pp;
+  mycutb = isPbPb?mycutb_PP:mycutb_pp;
+  mycutg = isPbPb?mycutg_PP:mycutg_pp;
+  colsyst = isPbPb?"PbPb":"pp";
+
+  cuts = isPbPb?Form("(%s)&&Bpt>%f&&Bpt<%f&&hiBin>=0&&hiBin<=200",mycuts.Data(),ptmin,ptmax):Form("(%s)&&Bpt>%f&&Bpt<%f",mycuts.Data(),ptmin,ptmax);
+  cutb = isPbPb?Form("(%s)&&Bpt>%f&&Bpt<%f&&hiBin>=0&&hiBin<=200",mycutb.Data(),ptmin,ptmax):Form("(%s)&&Bpt>%f&&Bpt<%f",mycutb.Data(),ptmin,ptmax);
+  cutg = isPbPb?Form("(%s)&&Gpt>%f&&Gpt<%f&&hiBin>=0&&hiBin<=200",mycutg.Data(),ptmin,ptmax):Form("(%s)&&Gpt>%f&&Gpt<%f",mycutg.Data(),ptmin,ptmax);
+
+  TLatex* texPar = new TLatex(0.18,0.93, "PbPb 5.02 TeV B^{+}");
+  texPar->SetNDC();
+  texPar->SetTextAlign(12);
+  texPar->SetTextSize(0.04);
+  texPar->SetTextFont(42);
+  TLatex* texPtY = new TLatex(0.96,0.93, Form("|y|<2.4, %.1f<p_{T}<%.1f GeV/c",ptmin,ptmax));
+  texPtY->SetNDC();
+  texPtY->SetTextAlign(32);
+  texPtY->SetTextSize(0.04);
+  texPtY->SetTextFont(42);
 
   TString ptstring = Form("(%.1f,%.1f)",ptmin,ptmax);
   cout<<endl;
@@ -72,13 +80,6 @@ void readxml_BDT(Float_t ptMin=7., Float_t ptMax=10., Float_t RAA=0.49)
   generated->AddFriend("ntHlt");
   generated->AddFriend("ntHi");
 
-  mycuts = mycuts_PP;//PbPb
-  mycutb = mycutb_PP;//
-  mycutg = mycutg_PP;//
-  cuts = Form("(%s)&&Bpt>%f&&Bpt<%f&&hiBin>=0&&hiBin<=200",mycuts.Data(),ptmin,ptmax);
-  cutb = Form("(%s)&&Bpt>%f&&Bpt<%f&&hiBin>=0&&hiBin<=200",mycutb.Data(),ptmin,ptmax);
-  cutg = Form("(%s)&&Gpt>%f&&Gpt<%f&&hiBin>=0&&hiBin<=200",mycutg.Data(),ptmin,ptmax);
-
   const Int_t nBDT = 50;//
   Float_t minBDT = -1;//
   Float_t maxBDT = 1;//
@@ -103,10 +104,10 @@ void readxml_BDT(Float_t ptMin=7., Float_t ptMax=10., Float_t RAA=0.49)
   background->Project("hcountEffB","BDT",Form("%s",cutb.Data()));
   TCanvas* chcountEffS = new TCanvas("chcountEffS","",600,600);
   hcountEffS->Draw();
-  chcountEffS->SaveAs(Form("plots/pT_%.0f_%.0f_chcountEffS.pdf",ptmin,ptmax));
+  chcountEffS->SaveAs(Form("plots/%s_%s_pT_%.0f_%.0f_chcountEffS.pdf",MVAtype.Data(),colsyst.Data(),ptmin,ptmax));
   TCanvas* chcountEffB = new TCanvas("chcountEffB","",600,600);
   hcountEffB->Draw();
-  chcountEffB->SaveAs(Form("plots/pT_%.0f_%.0f_chcountEffB.pdf",ptmin,ptmax));
+  chcountEffB->SaveAs(Form("plots/%s_%s_pT_%.0f_%.0f_chcountEffB.pdf",MVAtype.Data(),colsyst.Data(),ptmin,ptmax));
   
   TH1F* hdisEffS = (TH1F*)hcountEffS->Clone("hdisEffS");
   hdisEffS->Scale(1./hcountEffS->Integral());
@@ -150,7 +151,7 @@ void readxml_BDT(Float_t ptMin=7., Float_t ptMax=10., Float_t RAA=0.49)
   leg->Draw("same");
   texPar->Draw();
   texPtY->Draw();
-  cdisEffSB->SaveAs(Form("plots/pT_%.0f_%.0f_disEffSB.pdf",ptmin,ptmax));
+  cdisEffSB->SaveAs(Form("plots/%s_%s_pT_%.0f_%.0f_disEffSB.pdf",MVAtype.Data(),colsyst.Data(),ptmin,ptmax));
 
   Float_t allS=0,allB=0;
   Float_t effS[nBDT],effB[nBDT],effSig[nBDT];
@@ -177,11 +178,6 @@ void readxml_BDT(Float_t ptMin=7., Float_t ptMax=10., Float_t RAA=0.49)
     {
       effS[i]/=allS;
       effB[i]/=allB;
-    }
-
-  for(int i=0;i<nBDT;i++)
-    {
-      cout<<gbdtBins[i]<<" "<<effS[i]<<" "<<effB[i]<<endl;
     }
 
   TH2F* hemptyeff = new TH2F("hemptyeff","",50,-1.2,1.2,10,0.,1.2);
@@ -221,7 +217,7 @@ void readxml_BDT(Float_t ptMin=7., Float_t ptMax=10., Float_t RAA=0.49)
   legeff->AddEntry(geffB,"Background","pl");
   legeff->AddEntry(geffS,"Signal","pl");
   legeff->Draw("same");
-  ceffSB->SaveAs(Form("plots/pT_%.0f_%.0f_EffvsBDT.pdf",ptmin,ptmax));
+  ceffSB->SaveAs(Form("plots/%s_%s_pT_%.0f_%.0f_EffvsBDT.pdf",MVAtype.Data(),colsyst.Data(),ptmin,ptmax));
 
   Float_t wSignal=0;
   Float_t wBackground=0;
@@ -279,7 +275,7 @@ void readxml_BDT(Float_t ptMin=7., Float_t ptMax=10., Float_t RAA=0.49)
   texPar->Draw();
   texPtY->Draw();
   gsig->Draw("same*");
-  csig->SaveAs(Form("plots/pT_%.0f_%.0f_Significance.pdf",ptmin,ptmax));
+  csig->SaveAs(Form("plots/%s_%s_pT_%.0f_%.0f_Significance.pdf",MVAtype.Data(),colsyst.Data(),ptmin,ptmax));
 }
 
 void calRatio(TTree* signal, TTree* background, TTree* generated, Float_t* results, Bool_t verbose=false)
@@ -293,7 +289,7 @@ void calRatio(TTree* signal, TTree* background, TTree* generated, Float_t* resul
   background->Project("hmassB","Bmass",selb);
   TCanvas* cmassB = new TCanvas("cmassB","",600,600);
   hmassB->Draw();
-  cmassB->SaveAs(Form("plots/pT_%.0f_%.0f_Background.pdf",ptmin,ptmax));
+  cmassB->SaveAs(Form("plots/%s_%s_pT_%.0f_%.0f_Background.pdf",MVAtype.Data(),colsyst.Data(),ptmin,ptmax));
   Int_t nentriesB = hmassB->Integral();
 
   //FONLL
@@ -314,24 +310,26 @@ void calRatio(TTree* signal, TTree* background, TTree* generated, Float_t* resul
     }
   TCanvas* cfonll = new TCanvas("cfonll","",600,600);
   hfonll->Draw();
-  cfonll->SaveAs(Form("plots/pT_%.0f_%.0f_Fonll.pdf",ptmin,ptmax));
+  cfonll->SaveAs(Form("plots/%s_%s_pT_%.0f_%.0f_Fonll.pdf",MVAtype.Data(),colsyst.Data(),ptmin,ptmax));
   //
 
   TH1D* hrec = new TH1D("hrec",";B p_{T} (GeV/c);Signal reco entries",nbin-1,pt);
   TH1D* hgen = new TH1D("hgen",";B p_{T} (GeV/c);Generated entries",nbin-1,pt);
   TH1D* heff = new TH1D("heff",";B p_{T} (GeV/c);Prefilter efficiency",nbin-1,pt);
-  signal->Project("hrec","Bpt",Form("%s*(%s&&hiBin>=0&&hiBin<=200)",weight.Data(),mycuts.Data()));
-  generated->Project("hgen","Gpt",Form("%s*(%s&&hiBin>=0&&hiBin<=200)",weight.Data(),mycutg.Data()));
+  if(isPbPb) signal->Project("hrec","Bpt",Form("%s*(%s&&hiBin>=0&&hiBin<=200)",weight.Data(),mycuts.Data()));
+  else signal->Project("hrec","Bpt",Form("%s*(%s)",weight.Data(),mycuts.Data()));
+  if(isPbPb) generated->Project("hgen","Gpt",Form("%s*(%s&&hiBin>=0&&hiBin<=200)",weight.Data(),mycutg.Data()));
+  else generated->Project("hgen","Gpt",Form("%s*(%s)",weight.Data(),mycutg.Data()));
   heff->Divide(hrec,hgen,1.,1.,"B");
   TCanvas* ceff = new TCanvas("ceff","",600,600);
   heff->Draw();
-  ceff->SaveAs(Form("plots/pT_%.0f_%.0f_EffPrefilter.pdf",ptmin,ptmax));
+  ceff->SaveAs(Form("plots/%s_%s_pT_%.0f_%.0f_EffPrefilter.pdf",MVAtype.Data(),colsyst.Data(),ptmin,ptmax));
 
   TH1D* htheoryreco = new TH1D("htheoryreco","",nbin-1,pt);
   htheoryreco->Multiply(heff,hfonll,1,1,"B");
 
   //use lumi//
-  Double_t lumi = 15.17;
+  Double_t lumi = isPbPb?15.17:27.7;
   Double_t BR = 6.09604e-5;
   Double_t deltapt = 0.25;
   //central[i] - in pb/GeV/c

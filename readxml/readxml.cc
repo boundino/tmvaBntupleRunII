@@ -8,9 +8,9 @@ TString cutss;
 TString cutsb;
 TString cutsg;
 TString weight="1";
-//TString weight="pthatweight";
-//Raa=0.44,0.42,0.41,0.41
-void readxml(Float_t RAA=0.41, TString mva="CutsSA", Int_t pbpb=1, Float_t ptMin=30., Float_t ptMax=50.)
+
+//Raa=0.49,0.44,0.42,0.41,0.41
+void readxml(Int_t pbpb=1, TString mva="CutsSA", Float_t ptMin=30., Float_t ptMax=50., Float_t RAA=1.)
 {
   gStyle->SetTextSize(0.05);
   gStyle->SetTextFont(42);
@@ -21,34 +21,22 @@ void readxml(Float_t RAA=0.41, TString mva="CutsSA", Int_t pbpb=1, Float_t ptMin
   gStyle->SetTitleX(.0f);
 
   void calRatio(TTree* signal, TTree* background, TTree* generated, Float_t* results, Bool_t verbose=false);
-  raa = RAA;
   isPbPb = (bool)pbpb;
   MVAtype = (TString)mva;
   ptmin = ptMin;
   ptmax = ptMax;
-  if(isPbPb)
-    {
-      inputSname = inputSname_PP;
-      inputBname = inputBname_PP;      
-      mycuts = mycuts_PP;
-      mycutb = mycutb_PP;
-      mycutg = mycutg_PP;
-      colsyst = "PbPb";
-    }
-  else
-    {
-      inputSname = inputSname_pp;
-      inputBname = inputBname_pp;
-      mycuts = mycuts_pp;
-      mycutb = mycutb_pp;
-      mycutg = mycutg_pp;
-      colsyst = "pp";
-    }
-  cout<<inputSname<<endl;
-  cout<<inputBname<<endl;
-  cutss = Form("(%s)&&Bpt>%f&&Bpt<%f&&hiBin>=0&&hiBin<=200",mycuts.Data(),ptmin,ptmax);
-  cutsb = Form("(%s)&&Bpt>%f&&Bpt<%f&&hiBin>=0&&hiBin<=200",mycutb.Data(),ptmin,ptmax);
-  cutsg = Form("(%s)&&Gpt>%f&&Gpt<%f&&hiBin>=0&&hiBin<=200",mycutg.Data(),ptmin,ptmax);
+
+  inputSname = isPbPb?inputSname_PP:inputSname_pp;
+  inputBname = isPbPb?inputBname_PP:inputBname_pp;      
+  raa = isPbPb?RAA:1.;
+  mycuts = isPbPb?mycuts_PP:mycuts_pp;
+  mycutb = isPbPb?mycutb_PP:mycutb_pp;
+  mycutg = isPbPb?mycutg_PP:mycutg_pp;
+  colsyst = isPbPb?"PbPb":"pp";
+
+  cutss = isPbPb?Form("(%s)&&Bpt>%f&&Bpt<%f&&hiBin>=0&&hiBin<=200",mycuts.Data(),ptmin,ptmax):Form("(%s)&&Bpt>%f&&Bpt<%f",mycuts.Data(),ptmin,ptmax);
+  cutsb = isPbPb?Form("(%s)&&Bpt>%f&&Bpt<%f&&hiBin>=0&&hiBin<=200",mycutb.Data(),ptmin,ptmax):Form("(%s)&&Bpt>%f&&Bpt<%f",mycutb.Data(),ptmin,ptmax);
+  cutsg = isPbPb?Form("(%s)&&Gpt>%f&&Gpt<%f&&hiBin>=0&&hiBin<=200",mycutg.Data(),ptmin,ptmax):Form("(%s)&&Gpt>%f&&Gpt<%f",mycutg.Data(),ptmin,ptmax);
 
   TFile *inputS = new TFile(inputSname.Data());
   TFile *inputB = new TFile(inputBname.Data());
@@ -75,9 +63,6 @@ void readxml(Float_t RAA=0.41, TString mva="CutsSA", Int_t pbpb=1, Float_t ptMin
   TString fullMethodName(""); 
   TMVA::gTools().ReadAttr(rootnode, "Method", fullMethodName);
 
-  //cout << endl;
-  //cout << mva << " "  << colsyst << " " << ptmin << "-" << ptmax << endl;
-  //cout<<endl;
   cout<<" ╒══════════════════════════════════════════════════╕"<<endl;
   cout<<" |               Cut Opt Configuration              |"<<endl;
   cout<<" ├────────────┬────────────────────────────┬────────┤"<<endl;
@@ -154,8 +139,6 @@ void readxml(Float_t RAA=0.41, TString mva="CutsSA", Int_t pbpb=1, Float_t ptMin
 	      cutval[l].push_back(min);
 	    }
 	}
-      //cout<<"test"<<endl;
-      //cuts.push_back(cut);
       eff = TMVA::gTools().GetNextChild(eff);
       n++;
     }
@@ -186,9 +169,6 @@ void readxml(Float_t RAA=0.41, TString mva="CutsSA", Int_t pbpb=1, Float_t ptMin
 	  maxindex=i;
 	}
     }
-
-  //cout << endl;
-  //cout << mva << " "  << colsyst << " " << ptmin << "-" << ptmax << endl;
 
   cout<<endl;
   cout<<" ╒══════════════════════════════════════════════════╕"<<endl;
@@ -238,6 +218,7 @@ void readxml(Float_t RAA=0.41, TString mva="CutsSA", Int_t pbpb=1, Float_t ptMin
   texPtY->Draw();
   gsig->Draw("same*");
   csig->SaveAs(Form("plots/Significance_%s_%s_%.0f_%.0f.pdf",MVAtype.Data(),colsyst.Data(),ptmin,ptmax));
+
 }
 
 void calRatio(TTree* signal, TTree* background, TTree* generated, Float_t* results, Bool_t verbose=false)
@@ -246,30 +227,6 @@ void calRatio(TTree* signal, TTree* background, TTree* generated, Float_t* resul
   TString selb = cutsb;
   TString selg = cutsg;
 
-  //Get signal peak sigma
-  /*
-  TH1D* hmassS = new TH1D("hmassS",";B mass (GeV/c^{2});Signal Entries",50,5.0,6.0);
-  signal->Project("hmassS","Bmass",Form("%s&&Bpt>%f&&Bpt<%f&&Bgen==23333",sels.Data(),ptmin,ptmax));
-  divideBinWidth(hmassS);
-  hmassS->Sumw2();
-  TCanvas* cmassS = new TCanvas("cmassS","",600,600);
-  hmassS->Draw();
-  TF1* fmass = new TF1("fmass","[0]*([3]*Gaus(x,[1],[2])/(sqrt(2*3.14159)*[2])+(1-[3])*Gaus(x,[1],[4])/(sqrt(2*3.14159)*[4]))");
-  fmass->SetParLimits(1,5.27,5.29);
-  fmass->SetParLimits(2,0.01,0.05);
-  fmass->SetParLimits(4,0.01,0.05);
-  fmass->SetParLimits(3,0,1);
-  float setparam1 = 5.279;
-  float setparam2 = 0.05;
-  float setparam4 = 0.03;
-  fmass->SetParameter(1,setparam1);
-  fmass->SetParameter(2,setparam2);
-  fmass->SetParameter(4,setparam4);
-  if(verbose) hmassS->Fit("fmass","L","",5.0,6.0);
-  else hmassS->Fit("fmass","L q","",5.0,6.0);
-  cmassS->SaveAs(Form("plots/Signal_%s_%s_%.0f_%.0f.pdf",MVAtype.Data(),colsyst.Data(),ptmin,ptmax));
-  float sigma = fmass->GetParameter(2);
-  */
   //Background candidate number
   TH1D* hmassB = new TH1D("hmassB",";B mass (GeV/c^{2});Background Entries",50,0,10);
   background->Project("hmassB","Bmass",selb);
@@ -310,7 +267,7 @@ void calRatio(TTree* signal, TTree* background, TTree* generated, Float_t* resul
   TH1D* htheoryreco = new TH1D("htheoryreco","",nbin-1,pt);
   htheoryreco->Multiply(heff,hfonll,1,1,"B");
 
-  Double_t lumi = 15.17;
+  Double_t lumi = isPbPb?15.17:27.7;
   double BR = 6.09604e-5;
   double deltapt = 0.25;
   //central[i] - in pb/GeV/c
